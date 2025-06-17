@@ -300,11 +300,12 @@ function extractFontFaces() {
       continue; // skip CORS-restricted stylesheets
     }
     if (!rules) continue;
+    // Determine base URL for relative paths
+    const baseURL = sheet.href ? new URL(sheet.href, document.baseURI) : new URL(document.baseURI);
     for (const rule of rules) {
       if (rule.type === CSSRule.FONT_FACE_RULE) {
         const style = rule.style;
         const family = style.getPropertyValue('font-family').replace(/["']/g, '').trim();
-        // Gather all src properties together
         const srcParts = [];
         for (let i = 0; i < style.length; i++) {
           const prop = style[i];
@@ -314,16 +315,20 @@ function extractFontFaces() {
         }
         if (srcParts.length === 0) continue;
         const combinedSrc = srcParts.join(', ');
-        // Extract all URLs
+        // Extract and resolve URLs
         const urls = [];
-        combinedSrc.replace(/url\(([^)]+)\)/g, (_, url) => {
-          urls.push(url.replace(/["']/g, '').trim());
+        combinedSrc.replace(/url\(([^)]+)\)/g, (_, rawUrl) => {
+          const cleanedUrl = rawUrl.replace(/["']/g, '').trim();
+          try {
+            const absUrl = new URL(cleanedUrl, baseURL).href;
+            urls.push(absUrl);
+          } catch (e) {
+            // Skip malformed URL
+          }
         });
         if (urls.length === 0) continue;
-        // Sort URLs for deduplication
         const sortedUrls = urls.slice().sort();
         const styleText = style.cssText;
-        // Use family + sorted URLs + styleText as key for dedupe
         const key = family + '|' + sortedUrls.join(',') + '|' + styleText;
         if (!fontMap.has(key)) {
           fontMap.set(key, { family, entry: { urls, style: styleText } });
