@@ -18,7 +18,7 @@ function createOverlay(fontFaces) {
       all: revert;
       font-family: sans-serif;
       box-sizing: border-box;
-      line-height: unset;
+      line-height: unset !important;
     }
     #font-inspector-overlay {
       position: fixed;
